@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Text, View, Button, StyleSheet, Dimensions } from 'react-native';
 import { BarCodeScanner } from 'expo-barcode-scanner';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function ScannerScreen() {
+
+export default function ScannerScreen({ navigation }) {
   const [hasPermission, setHasPermission] = useState(null);
   const [scanned, setScanned] = useState(false);
   const [data, setData] = useState('');
@@ -14,10 +16,41 @@ export default function ScannerScreen() {
     })();
   }, []);
 
+  
+
   const handleBarCodeScanned = ({ type, data }) => {
     setScanned(true);
     setData(data);
     alert(`QR Code scanned: ${data}`);
+  };
+
+  const handleProceedWithScannedData = async (code) => {
+    console.log(code);
+    
+    try {
+        const token = await AsyncStorage.getItem('userToken');
+
+        // Make sure the token is available before proceeding
+        if (!token) {
+          alert('No token found. Please log in again.');
+          return;
+        }
+      const response = await fetch(`http://192.168.8.137:9090/api/fuel-quota/balance?qrCode=${code}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        }
+        // body: JSON.stringify({ scannedData: data }),
+      });
+
+      const result = await response.json();
+      console.log('Response from API:', result);
+
+      navigation.navigate('Fuel', { remainingQuota: result.remainingQuota, vehicleNo: result.vehicleNo });
+    } catch (error) {
+      console.error('Error sending data to API:', error);
+    }
   };
 
   if (hasPermission === null) {
@@ -42,11 +75,11 @@ export default function ScannerScreen() {
       )}
       <Text style={styles.text}>Scanned Data: {data}</Text>
 
-      {/* Button that displays when QR is scanned */}
+      {/* Button that calls the API endpoint when clicked */}
       {scanned && (
         <Button
           title="Proceed with Scanned Data"
-          onPress={() => console.log("Proceeding with data:", data)}
+          onPress={() => handleProceedWithScannedData(data)}
         />
       )}
     </View>

@@ -1,15 +1,37 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
+import { Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = () => {
-    if (username === 'user' && password === 'pass') { // Example credentials
-      navigation.replace('Scanner');
-    } else {
-      alert('Invalid username or password');
+  const handleLogin = async () => {
+    try {
+        
+      const response = await fetch('http://192.168.8.137:9090/api/resource/auth/authenticate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ "userName":username, "password":password }),
+      });
+      const result = await response.json();
+      
+
+      if (response.ok && result.isVerified) {
+        await AsyncStorage.setItem('userToken',result.token);
+        
+
+        // Navigate to the next screen
+        navigation.navigate('Scanner');
+      } else {
+        Alert.alert('Login Failed', result.message || 'Invalid credentials or user not verified');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Something went wrong. Please try again later.');
     }
   };
 
