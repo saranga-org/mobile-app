@@ -16,8 +16,10 @@
     "expo-barcode-scanner": "~13.0.1",
     "expo-camera": "~15.0.16",
     "expo-status-bar": "~1.12.1",
+    "qrscannerapp": "file:",
     "react": "18.2.0",
     "react-native": "0.74.5",
+    "react-native-circular-progress": "^1.4.0",
     "use-latest-callback": "^0.2.1"
   },
   "devDependencies": {

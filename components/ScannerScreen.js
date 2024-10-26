@@ -2,9 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { Text, View, Button, StyleSheet, Dimensions } from 'react-native';
 import { BarCodeScanner } from 'expo-barcode-scanner';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '../config';
 
 
 export default function ScannerScreen({ navigation }) {
+
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem('userToken'); 
+      navigation.replace('Login'); 
+    } catch (error) {
+      console.error("Failed to logout:", error);
+    }
+  };
+
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <Button title="Logout" onPress={handleLogout} color="red" />
+      ),
+    });
+  }, [navigation]);
+
   const [hasPermission, setHasPermission] = useState(null);
   const [scanned, setScanned] = useState(false);
   const [data, setData] = useState('');
@@ -25,33 +44,39 @@ export default function ScannerScreen({ navigation }) {
   };
 
   const handleProceedWithScannedData = async (code) => {
-    console.log(code);
-    
     try {
-        const token = await AsyncStorage.getItem('userToken');
-
-        // Make sure the token is available before proceeding
-        if (!token) {
-          alert('No token found. Please log in again.');
-          return;
-        }
-      const response = await fetch(`http://192.168.8.137:9090/api/fuel-quota/balance?qrCode=${code}`, {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        alert('No token found. Please log in again.');
+        
+        return;
+      }
+  
+      const response = await fetch(`http://192.168.8.137:8084/api/fuel-quota/balance?qrCode=${code}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-        }
-        // body: JSON.stringify({ scannedData: data }),
+        },
       });
-
+  
+      // Check if response is OK (status code 200)
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Non-200 response:', errorText);
+        alert(`Error: ${errorText}`);
+        return;
+      }
+  
       const result = await response.json();
       console.log('Response from API:', result);
-
+  
       navigation.navigate('Fuel', { remainingQuota: result.remainingQuota, vehicleNo: result.vehicleNo });
     } catch (error) {
       console.error('Error sending data to API:', error);
     }
   };
+  
 
   if (hasPermission === null) {
     return <Text>Requesting for camera permission...</Text>;
